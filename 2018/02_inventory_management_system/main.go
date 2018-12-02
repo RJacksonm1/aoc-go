@@ -26,5 +26,14 @@ func main() {
 		boxes = append(boxes, Box{id: id})
 	}
 
-	fmt.Println(Checksum(boxes))
+	fabricBoxA, fabricBoxB := FindPrototypeFabrics(boxes)
+	var fabricBoxCommonLetters string
+
+	for i, r := range fabricBoxA.id {
+		if fabricBoxA.id[i] == fabricBoxB.id[i] {
+			fabricBoxCommonLetters += string(r)
+		}
+	}
+
+	fmt.Println(fabricBoxCommonLetters)
 }
