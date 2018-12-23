@@ -4,7 +4,9 @@ import "fmt"
 
 // Fabric is a 2d map (y,y) of square inches, where each inch could be
 // claimed (many times) for use in a particular garment
-type Fabric map[int]map[int][]Claim
+type Fabric struct {
+	Claims map[int]Claim
+}
 
 // Conflict represents a square-inch of fabric with multiple claims
 type Conflict struct {
@@ -14,43 +16,72 @@ type Conflict struct {
 
 // AddClaim Add a claim to the fabric
 func (f *Fabric) AddClaim(c Claim) {
-	for x := c.X; x < (c.X + c.W); x++ {
-		for y := c.Y; y < (c.Y + c.H); y++ {
-			if (*f)[x] == nil {
-				(*f)[x] = make(map[int][]Claim)
-			}
+	if f.Claims == nil {
+		f.Claims = make(map[int]Claim)
+	}
+	f.Claims[c.ID] = c
+}
 
-			(*f)[x][y] = append((*f)[x][y], c)
+// PlottedClaims returns a x-y map of claims
+func (f *Fabric) PlottedClaims() map[int]map[int][]Claim {
+	claimsPlot := make(map[int]map[int][]Claim)
+
+	for _, c := range f.Claims {
+		for x := c.X; x < (c.X + c.W); x++ {
+			for y := c.Y; y < (c.Y + c.H); y++ {
+
+				if claimsPlot[x] == nil {
+					claimsPlot[x] = make(map[int][]Claim)
+				}
+
+				claimsPlot[x][y] = append(claimsPlot[x][y], c)
+			}
 		}
 	}
+
+	return claimsPlot
 }
 
 // Conflicts will return the square inches of fabric which have multiple claims
-func (f *Fabric) Conflicts() (c []Conflict) {
-	for x, ys := range *f {
+// Since we're going through all the claims, we might as well find the ones which don't conflict as well
+func (f *Fabric) Conflicts() (conflicts []Conflict, remainder []Claim) {
+	claimsAndConflicts := make(map[Claim]bool)
+
+	for x, ys := range f.PlottedClaims() {
 		for y, claims := range ys {
-			if len(claims) <= 1 {
-				continue
+			siblingsConflict := len(claims) > 1
+
+			if siblingsConflict {
+				conflicts = append(conflicts, Conflict{x, y, claims})
 			}
 
-			c = append(c, Conflict{x, y, claims})
+			for _, c := range claims {
+				// If this claim's already been tagged as conflicting, make sure
+				// we never inadvertently mark it otherwise
+				if claimsAndConflicts[c] != true {
+					claimsAndConflicts[c] = siblingsConflict
+				}
+			}
 		}
 	}
 
-	return c
+	unconflictingClaims := make([]Claim, 0)
+	for c, conflicts := range claimsAndConflicts {
+		if !conflicts {
+			unconflictingClaims = append(unconflictingClaims, c)
+		}
+	}
+
+	return conflicts, unconflictingClaims
 }
 
 // Width of the fabric, computed from the claims
 func (f *Fabric) Width() int {
 	biggestW := 0
 
-	for _, ys := range *f {
-		for _, claims := range ys {
-			for _, c := range claims {
-				if c.X+c.W > biggestW {
-					biggestW = c.X + c.W
-				}
-			}
+	for _, c := range f.Claims {
+		if c.X+c.W > biggestW {
+			biggestW = c.X + c.W
 		}
 	}
 
@@ -61,13 +92,9 @@ func (f *Fabric) Width() int {
 func (f *Fabric) Height() int {
 	biggestH := 0
 
-	for _, ys := range *f {
-		for _, claims := range ys {
-			for _, c := range claims {
-				if c.Y+c.H > biggestH {
-					biggestH = c.Y + c.H
-				}
-			}
+	for _, c := range f.Claims {
+		if c.Y+c.H > biggestH {
+			biggestH = c.Y + c.H
 		}
 	}
 
@@ -78,10 +105,11 @@ func (f *Fabric) Height() int {
 func (f *Fabric) Render() {
 	w := f.Width()
 	h := f.Height()
+	plottedClaims := f.PlottedClaims()
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			claims := (*f)[x][y]
+			claims := plottedClaims[x][y]
 			claimCount := len(claims)
 
 			if claimCount == 0 {

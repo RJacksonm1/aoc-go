@@ -39,9 +39,17 @@ func main() {
 
 	// fabric.Render()
 
-	fmt.Printf("Fabric is at least %d x %d; %d square inches are in conflict\n",
+	conflicts, remainder := fabric.Conflicts()
+
+	fmt.Printf(
+		"Fabric is at least %d x %d; %d square inches are in conflict; %d non-conflicting\n",
 		fabric.Width(),
 		fabric.Height(),
-		len(fabric.Conflicts()),
+		len(conflicts),
+		len(remainder),
 	)
+
+	for _, c := range remainder {
+		fmt.Printf("\tNon-conflicting claim: %s\n", c.ToString())
+	}
 }
