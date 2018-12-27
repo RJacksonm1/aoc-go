@@ -1,0 +1,9 @@
+=== RUN   TestConflicts
+--- PASS: TestConflicts (0.23s)
+    fabric_test.go:85: PASS: 0
+    fabric_test.go:85: PASS: 1
+goos: darwin
+goarch: amd64
+BenchmarkConflicts-4   	      10	 168428884 ns/op	94851036 B/op	  486419 allocs/op
+PASS
+ok  	_/Users/rjackson/Code/advent-of-code/2018/03_no_matter_how_you_slice_it/garmentfactory	2.141s

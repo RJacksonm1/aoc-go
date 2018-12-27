@@ -36,6 +36,16 @@ func NewClaimFromDeclaration(declaration string) (c Claim, err error) {
 	return c, nil
 }
 
+// MustCreateClaim is a wrapper for NewClaimFromDeclaration with a single export,
+// which will panic upon failure
+func MustCreateClaim(c Claim, err error) Claim {
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
 // ToString represents the claim as a declaration string
 func (c *Claim) ToString() string {
 	return fmt.Sprintf("#%d @ %d,%d: %dx%d", c.ID, c.X, c.Y, c.W, c.H)

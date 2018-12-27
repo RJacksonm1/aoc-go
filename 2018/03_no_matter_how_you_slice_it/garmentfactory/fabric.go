@@ -1,11 +1,21 @@
 package garmentfactory
 
-import "fmt"
+import (
+	"fmt"
+)
+
+// Coordinate represents a square-inch of a given Fabric
+type Coordinate struct {
+	X, Y int
+}
 
 // Fabric is a 2d map (y,y) of square inches, where each inch could be
 // claimed (many times) for use in a particular garment
 type Fabric struct {
 	Claims map[int]Claim
+
+	// Computed properties
+	coordinateIndex map[Coordinate][]Claim
 }
 
 // Conflict represents a square-inch of fabric with multiple claims
@@ -20,26 +30,20 @@ func (f *Fabric) AddClaim(c Claim) {
 		f.Claims = make(map[int]Claim)
 	}
 	f.Claims[c.ID] = c
+	f.indexClaim(c)
 }
 
-// PlottedClaims returns a x-y map of claims
-func (f *Fabric) PlottedClaims() map[int]map[int][]Claim {
-	claimsPlot := make(map[int]map[int][]Claim)
-
-	for _, c := range f.Claims {
-		for x := c.X; x < (c.X + c.W); x++ {
-			for y := c.Y; y < (c.Y + c.H); y++ {
-
-				if claimsPlot[x] == nil {
-					claimsPlot[x] = make(map[int][]Claim)
-				}
-
-				claimsPlot[x][y] = append(claimsPlot[x][y], c)
-			}
-		}
+func (f *Fabric) indexClaim(c Claim) {
+	if f.coordinateIndex == nil {
+		f.coordinateIndex = make(map[Coordinate][]Claim)
 	}
 
-	return claimsPlot
+	for x := c.X; x < (c.X + c.W); x++ {
+		for y := c.Y; y < (c.Y + c.H); y++ {
+			xy := Coordinate{x, y}
+			f.coordinateIndex[xy] = append(f.coordinateIndex[xy], c)
+		}
+	}
 }
 
 // Conflicts will return the square inches of fabric which have multiple claims
@@ -47,20 +51,19 @@ func (f *Fabric) PlottedClaims() map[int]map[int][]Claim {
 func (f *Fabric) Conflicts() (conflicts []Conflict, remainder []Claim) {
 	claimsAndConflicts := make(map[Claim]bool)
 
-	for x, ys := range f.PlottedClaims() {
-		for y, claims := range ys {
-			siblingsConflict := len(claims) > 1
+	for xy, claims := range f.coordinateIndex {
 
-			if siblingsConflict {
-				conflicts = append(conflicts, Conflict{x, y, claims})
-			}
+		siblingsConflict := len(claims) > 1
 
-			for _, c := range claims {
-				// If this claim's already been tagged as conflicting, make sure
-				// we never inadvertently mark it otherwise
-				if claimsAndConflicts[c] != true {
-					claimsAndConflicts[c] = siblingsConflict
-				}
+		if siblingsConflict {
+			conflicts = append(conflicts, Conflict{xy.X, xy.Y, claims})
+		}
+
+		for _, c := range claims {
+			// If this claim's already been tagged as conflicting, make sure
+			// we never inadvertently mark it otherwise
+			if claimsAndConflicts[c] != true {
+				claimsAndConflicts[c] = siblingsConflict
 			}
 		}
 	}
@@ -105,11 +108,11 @@ func (f *Fabric) Height() int {
 func (f *Fabric) Render() {
 	w := f.Width()
 	h := f.Height()
-	plottedClaims := f.PlottedClaims()
+	plottedClaims := f.coordinateIndex
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			claims := plottedClaims[x][y]
+			claims := plottedClaims[Coordinate{x, y}]
 			claimCount := len(claims)
 
 			if claimCount == 0 {
