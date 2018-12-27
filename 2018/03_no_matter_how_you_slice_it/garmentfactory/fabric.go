@@ -49,28 +49,22 @@ func (f *Fabric) indexClaim(c Claim) {
 // Conflicts will return the square inches of fabric which have multiple claims
 // Since we're going through all the claims, we might as well find the ones which don't conflict as well
 func (f *Fabric) Conflicts() (conflicts []Conflict, remainder []Claim) {
-	claimsAndConflicts := make(map[Claim]bool)
+	claimsAndConflicts := make(map[Claim]bool, len(f.Claims))
 
 	for xy, claims := range f.coordinateIndex {
-
-		siblingsConflict := len(claims) > 1
-
-		if siblingsConflict {
-			conflicts = append(conflicts, Conflict{xy.X, xy.Y, claims})
+		if len(claims) <= 1 {
+			continue
 		}
 
+		conflicts = append(conflicts, Conflict{xy.X, xy.Y, claims})
 		for _, c := range claims {
-			// If this claim's already been tagged as conflicting, make sure
-			// we never inadvertently mark it otherwise
-			if claimsAndConflicts[c] != true {
-				claimsAndConflicts[c] = siblingsConflict
-			}
+			claimsAndConflicts[c] = true
 		}
 	}
 
 	unconflictingClaims := make([]Claim, 0)
-	for c, conflicts := range claimsAndConflicts {
-		if !conflicts {
+	for _, c := range f.Claims {
+		if !claimsAndConflicts[c] {
 			unconflictingClaims = append(unconflictingClaims, c)
 		}
 	}
